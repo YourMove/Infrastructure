@@ -1,0 +1,201 @@
+<html><head><script>
+
+// YourMove Infrastructure, 2013
+//   http://github.io/MJCD/YMI/Bootstrapper.html/
+//   Bootstrapper.html, Version 0.3
+//   An incredibly light weight resource bootstrapper, with extras!
+//   Architecture: InitQueue | Locked->LoadQueue->Loading+Monitoring->Loaded-Monitoring->Init/Callbacks->Unlocked
+
+console.log('Bootstrapper.html/Specification.md:1\t\t Bootstrapper defined');
+Bootstrapper = function (Resources) {
+
+	console.log('Bootstrapper.html/Specification.md:5\t\t Bootstrapper internal storage is cleared');
+	if ((typeof Bootstrapper.Running === 'undefined' || Bootstrapper.Running === false) && Resources.length > 0) {
+		['InitQueue', 'InitHistory', 'LoadQueue', 'Monitoring', 'Loaded', 'Ready'].forEach(function (Var) { 
+			Bootstrapper[Var] = [];
+		})
+		Bootstrapper.Running = true;
+	}
+	else return console.log('Bootstrapper.html/Specification.md:5\t\t Failed, already running or no resources given..', Resources);
+
+	console.log('Bootstrapper.html/Specification.md:6\t\t Resources normalized into array');
+	if (typeof Resources === 'function') Resources = [Resources];
+	
+	console.log('Bootstrapper.html/Specification.md:7\t\t Begin iterating resources');
+	Resources.forEach(function (Resource) {
+
+		console.log('Bootstrapper.html/Specification.md:8\t\t Begin constructing RequestObject');
+		var RequestObject = {
+			Resource: Resource,
+			InitQueueIndex: Bootstrapper.InitQueue.length,
+		}
+
+		console.log('Bootstrapper.html/Specification.md:9\t\t Logic fork');
+		if (typeof Resource === 'object') {
+
+			console.log('Bootstrapper.html/Specification.md:9.1\t\t Resource record is an object');
+			if (typeof Resource.URL === 'undefined')
+				return console.log('Bootstrapper.html/Specification.md:9.1\t\t Failed: Resource Objects need a URL.');
+			else if (Array.isArray(Resource.URL) === false) { 
+				console.log('Bootstrapper.html/Specification.md:9.1.1\t Normalize the URL param into an array');
+				Resource.URL = [Resource.URL];
+			}
+			RequestObject.URLs = Resource.URL;
+
+			console.log('Bootstrapper.html/Specification.md:9.1.2\t Construct and configure a script element for each URL');
+			RequestObject.Scripts = [];
+			RequestObject.URLs.forEach(function (URL) {
+
+				// Construct script object
+				var Script = document.createElement('script');
+				Script.type = 'text/javascript';
+				Script.language = 'javascript';
+				Script.src = URL;
+				RequestObject.Scripts.push(Script);
+
+				Script.RequestObject = RequestObject; // Reverse lookup, not sure if needed
+				Script.LoadQueueIndex = Bootstrapper.LoadQueue.length;
+				Bootstrapper.LoadQueue.push(Script);
+
+			});
+			
+			console.log('Bootstrapper.html/Specification.md:9.1.3\t Normalize conditionals');
+			if (typeof Resource.Where === 'undefined') Resource.Where = [];
+			else if (typeof Resource.Where === 'function' || typeof Resource.Where === 'string') {
+				console.log('Bootstrapper.html/Specification.md:9.1.3.1\t Normalize into array');
+				Resource.Where = [Resource.Where];
+			}
+			else if (Array.isArray(Resource.Where) === false) {
+				return console.log(
+					'Bootstrapper.html/Specification.md:9.1.3\t Failed: Conditional not string or array..', Resource.Where
+				);
+			}
+
+			console.log('Bootstrapper.html/Specification.md:9.1.4\t Process conditionals array..');
+			RequestObject.Conditionals = [];
+			Resource.Where.forEach(function (Where) {
+
+				if (typeof Where === 'string') {
+					console.log('Bootstrapper.html/Specification.md:9.1.4.1\t Convert string to function');
+					var Conditional = (function () {
+						if (typeof window[this.Variable] !== 'undefined') return false; return true;
+					}).bind(Conditional);
+					Conditional.Variable = Where;
+				}
+
+				else if (typeof Where === 'function') {
+					console.log('Bootstrapper.html/Specification.md:9.1.4.2\t Normalize into array');
+					var Conditional = [Where];
+				}
+				else return console.log(
+					'Bootstrapper.html/Specification.md:9.1.4.3\t Warning: Conditional is not valid..', Where
+				);
+
+				RequestObject.Conditionals.push(Conditional);
+
+			});
+
+			console.log('Bootstrapper.html/Specification.md:9.1.5\t Normalize callbacks');
+			if (typeof Resource.Callback === 'undefined') Resource.Callback = [];
+			else if (typeof Resource.Callback === 'function') {
+				console.log('Bootstrapper.html/Specification.md:9.1.5.1\t Normalize into array');
+				Resource.Callback = [Resource.Callback];
+			}
+			else if (Array.isArray(Resource.Callback) === false) {
+				return console.log(
+					'Bootstrapper.html/Specification.md:9.1.5.2\t Failed: Callback not function..', Resource.Callback
+				);
+			}
+
+			RequestObject.Callbacks = [];
+			Resource.Callback.forEach(function (Callback) {
+				console.log('Bootstrapper.html/Specification.md:9.1.5.2\t Ignore non-functions');
+				if (typeof Callback === 'function') RequestObject.Callbacks.push(Callback); // Else ignore.
+			});
+
+			console.log('Bootstrapper.html/Specification.md:9.1.6\t If valid conditionals exist - monitor for completion');
+			if (RequestObject.Conditionals.length > 0) Bootstrapper.Monitoring.push(RequestObject); // Start monitoring
+			else console.log(
+				'Bootstrapper.html/Specification.md:9.1.6\t Warning: No conditionals. No management of load process possible.'
+			);
+
+		}
+
+		else if (typeof Resource === 'function') {
+			console.log('Bootstrapper.html/Specification.md:9.3\t\t Resource record is a function');
+			RequestObject.Callbacks = [Resource];
+		}
+		else return console.log('Bootstrapper.html/Specification.md:9.3\t\t Failed: Resource record invalid type..', Resource);
+
+		console.log('Bootstrapper.html/Specification.md:9.4\t\t Add constructed request to InitQueue');
+		Bootstrapper.InitQueue.push(RequestObject);
+
+	});
+
+	console.log('Bootstrapper.html/Specification.md:10\t\t Watch for completion of all conditionals');
+	Bootstrapper.Watcher();
+
+	console.log('Bootstrapper.html/Specification.md:11\t\t Load all resources');
+	Bootstrapper.LoadQueue.forEach(function (Script, Index) { document.head.appendChild(Script); });
+	
+}; // End Bootstrapper()
+
+console.log('Bootstrapper.html/Specification.md:2\t\t Watcher added to Bootstrapper');
+Bootstrapper.Watcher = function () {
+	if (Bootstrapper.Monitoring.length < 1)
+		console.log('*\tBootstrapper.html/Specification.md:12,13,14\t Warning: No requests to monitor..');
+	else {
+		Bootstrapper.Monitoring.forEach(function (Request, MonitoringIndex) {
+
+			if (Request.Conditionals.length > 0) { 
+				Request.Conditionals.forEach(function (Logic, ConditionalIndex) {
+					if (Boolean(Logic()) === true) {
+						console.log('*\tBootstrapper.html/Specification.md:12\t\t Remove to avoid a lot of duplicate checking');
+						Request.Conditionals.splice(ConditionalIndex, 1);
+					}
+				});
+
+				if (Request.Conditionals.length === 0) {
+					console.log('*\tBootstrapper.html/Specification.md:13\t\t Remove from Monitoring');
+					Bootstrapper.Loaded.push(Request);
+					Bootstrapper.Monitoring.splice(MonitoringIndex, 1);
+				}
+			}
+
+		});
+
+		if (Bootstrapper.Monitoring.length > 0) setTimeout(Bootstrapper.Watcher, 25); // keep running
+		else {
+			console.log('*\tBootstrapper.html/Specification.md:14\t\t All callbacks are run from the InitQueue');
+			Bootstrapper.InitQueue.forEach(function (Request, InitIndex) {
+
+				Request.Callbacks.forEach(function (Callback) { Callback(); });
+				Bootstrapper.InitQueue.splice(InitIndex, 1);
+				delete Bootstrapper.InitQueueIndex;
+
+				Request.InitHistoryIndex = Bootstrapper.InitHistory.length;
+				Bootstrapper.InitHistory.push(Request);
+
+				console.log('*\tBootstrapper.html/Specification.md:15\t\t Bootstrapper is now complete, and is unlocked ready for reuse');
+				Bootstrapper.Running = false;
+
+			});
+		}
+	}
+
+}; // End Bootstrapper.Watcher()
+
+console.log('Bootstrapper.html/Specification.md:3\t\t Waits until Resources are defined');
+var Bootstrapper_WaitingForResourcesArray = function () {
+	if (typeof Resources === 'undefined') return setTimeout(Bootstrapper_WaitingForResourcesArray, 25);
+	console.log('Bootstrapper.html/Specification.md:3.2\t\t Bootstrapper is run with Resources..', Resources);
+	Bootstrapper(Resources);
+}.bind(window);
+console.log('Bootstrapper.html/Specification.md:3.1\t\t Waiting until window.Resources is defined');
+Bootstrapper_WaitingForResourcesArray();
+
+</script>
+
+<script type="text/javascript" src="../Tests/14.2.2.2.0.MultipleComplexManagedResourcesWithMultipleCallbacks.js"></script>
+
+</head><body></body></html>
