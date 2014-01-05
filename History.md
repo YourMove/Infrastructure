@@ -3,7 +3,13 @@
 
 * All log items are in chronological order, sorted by date (newest to oldest).
 
-== 24/12/2014
+== 05/01/2014
+
+* Bootstrapper.html is currently at 0.4 - it is not quite "specification complete" as I have not finished testing for typesafe-ness. Once this is done, it will make 0.5 and only have major changes made for bugs and/or differences to spec within a period of 2 months, after which it will be considered 1.0. Active use of the project by myself on OTHER ymi projects will help to accellerate this. Not until version 1.0 is reached will any more features be added.
+
+* Started Warehouser.js using Boilerplate 1.0 Skeleton. Readme has forward which establishes most of the core specification 1 requirements.
+
+== 24/12/2013
 
 * Specification.md added for /Bootstrapper.html/ - this will be a common format used for all sub-projects.
 * Comment specifications for /Bootstrapper.html/ bought up to standards referencing the new spec to console.
@@ -36,7 +42,7 @@ A _Results.md file will also be included and have a boilerplate-based document t
 
 * A complete specification test must test all available functionalities to the highest level 1000 times without incident to pass specification.
 
-== 22/12/2014
+== 22/12/2013
 
 * Contributions.md added
 ** Contains coding standards for all internal documents. Mainly for my own reference.
