@@ -9,56 +9,108 @@
 
 ## Forward
 
-**Warehouser** is an incredibly light weight single purpose library for storing and retrieving data. Unlike most data warehouses, no dedicated database server is needed, without sacrificing any data security. We ensure this through an iterative data model, which maintains data as discrete, unique writes.
+**Warehouser** is an incredibly light weight single purpose library for storing and retrieving data. Unlike most data warehouses, no dedicated database server is needed, without sacrificing any data security. We ensure this through an iterative data model, which maintains data as discrete, unique writes. It also offers an respectable indexer library (Warehouser.Indexer) which provides an abstract queryable interface. You can even search within records from the index (if the schema allows, discussed below). This Indexing functionality can be configured to run in varying methods.
 
-It also offers an respectable indexer library (Warehouser.Indexer) which provides an abstract queryable interface. You can even search within records from the index (if the schema allows, discussed below). This Indexing functionality can be configured to run in varying methods - from every request, a percentage of requests, a manually configured acron/Windows Scheduler job every X seconds/minutes, or manually via direct link (only updates when accessed, with password support [and later SSL certs]).
+Data is stored in regular folder structures, with an end node constituting a folder containing only folders (no files), with each folder inside ONLY containing files (no folders). Each file in this end node folder is itself a discrete record. Individual records are stored in JSON format, and thus have compatability with a vast array of languages and libraries. It is also filesystem agnostic - meaning it does not rely on any abstract features of any one filesystem. Use whatever filesystem you prefer! It also does not rely on filesystem meta-data for data integrity purposes (creation/modification times) - which means it is safe to copy these files to remote servers directly without risking meta-data loss.
 
-Data is stored in regular folder structures, with an end node constituting a folder containing only folders (no files), with each folder inside ONLY containing files (no folders). Each file in this end node folder is itself a discrete record. Individual records are stored in JSON format, and thus have compatability with a vast array of languages and libraries.
+## Core Features
 
-It is filesystem agnostic - meaning it does not rely on any abstract features of any one filesystem. Use whatever filesystem you prefer! It also does not rely on filesystem meta-data for data integrity purposes (creation/modification times) - which means it is safe to copy these files to remote servers directly without risking meta-data loss.
+* Responsive - low transactional latency
+* Iterative, document centric model
+* Easy to set up, no dedicated server!
 
 ## Requires
 
 * A HTTP webserver (Apache, etc) 
-* Capability of executing PHP scripts
+* Capability of executing PHP scripts for write capabilities
+
+(later possibly supporting more common server-side languages, such as Node.js, python, perl)..
 
 ## Getting Started
 
-1. Download the backend processor - "Warehouser.php".
-2. Copy/move this within your webservers document root.
-3. Create a folder to be used as your Warehouse Location (See "Warehouse Security" below for advice/tips).
+Preface: I understand this seems quite complicated, however the practices described are for **your security**. Please read them carefully. I will do an instructional video for Windows and Linux at some point.
+
+1. Download the backend processor - "Warehouser.php" above (0.1 is current version).
+
+2. Copy/move this within it's own folder somewhere inside your webservers documents folder (it can be inside a folder, etc). It is recommended to use "<Document Root>/Warehouser/Warehouser.php", as there are a few extra utility scripts you may end up wanting, and this will keep it all together.
+
+3. Create a folder OUTSIDE your webservers documents folder. Anywhere is fine, however you will need to note down its location for the next step. It is recommended to use with the example in step 2; "../../Warehouses/", two folders above - in the same folder that contains your webservers document root for security, however this is not required for entirely public data sets.
+
 4. Open "Warehouser.php" in a text editor.
-5. Find the configuration section near the top and change WarehouseLocation to reflect the location of the folder you just created. This can be absolute ("/var/Warehouses/") or relative ("../../Warehouses/").
 
-- The backend is now ready for use, but has no Warehouses. Please see "Warehouse Structure" below for a full guide -
+5. Go to line 10 and enter that location in as the value for WarehouseLocation. By default (and as per points 2 and 3 above) this will be set to a folder named "../../Warehouses/", two folders upwards from the folder Warehouser.php is in.
 
-6. For the front end library you can either:
+6. Depending on your operating system, and because you have placed this folder OUTSIDE your webservers document root - you will need to grant the appropriate permissions to your webserver's user (if running PHP as a server-plugin (SAPI)) or as whichever user your PHP cgi/fcgi runs as. I will post a guide for this for the common distributions and Windows at a later date, however googling this if you are not already aware how to do this will yield many great resources.
+
+7. For the front end library you can either:
 
 * Save the library from the link above, and link to it locally. With this method, you can edit "Warehouser.js", find the configuration section and set window.WarehouserSource.
-* (Recommended) Load Warehouser.js with Bootstrapper.html (<insert link here>) using the following resource line:
 
-    { URL: '<insert link here>', When: 'Warehouser', Callback: function () { Warehouser.Source = 'http://Example.Site/WarehouseLocation/'; } }
+* **(Recommended)**
+* Load Warehouser.js with Bootstrapper.html (<insert link here>) using the following resource line:
 
-- The frontend is now ready for use -
+    {
+    	URL: '<insert link here>', When: 'Warehouser',
+    	Callback: function () { Warehouser.Source = 'http://Example.Site/WarehouseLocation/'; }
+    }
 
-## Warehouse Structure
+## Creating Warehouses
 
-One of the advantages of the open file structure of Warehouser is that you can manipulate warehouses directly within your filesystem. Because of this, one of the first things you should consider is what users/groups are allowed what level of access within your Warehouse storage location.
+Now you have your back and front end ready, it's time to add something to work with. You can create Warehouses in two ways..
+
+* Using "./Warehouser.Client.php"
+
+You can grab this script from the same place you got your version of Warehouser from. It provides a dedicated editor and data set viewer, accessible from any browser. Though it is a PHP file, it also contains a clean and responsive JavaScript front-end library.
+
+This client will enforce the design methodology discussed below in "Designing Your Warehouse", so it is highly recommended to start with.
+
+To get started, grab the PHP file from the same version folder you got your "Warehouser.php", and save it into the same folder. No further configuration is needed (not even setting the WarehouseLocation!), then load it up from your browser.
+
+* Manually
+
+One of the advantages of the open file structure of Warehouser is that you can manipulate warehouses directly within your filesystem. Please see the Security section below for advice on how to maintain data security.
+
+# Relax, the hard part is over. Using Warehouser is remarkably easy.
+
+## Making a request
+
+Warehouser.js provides it's functionality through static functionality held within "window.Warehouser".
+
+* Warehouser.Write
+
+Syntax: Warehouser.Write('<Vector>', <JSON Data>);
+Examples:
+
+    // Writes a new record to Set1
+    Warehouser.Write('/WarehouseName/Set1', { hello: 2 });
+
+    // Writes a Revision (and creates if doesn't exist) to Record 1 in Set1
+    Warehouser.Write('/WarehouseName/Set1/1', { hello: 1 });
+
+* Warehouser.Read
+
+Syntax: Warehouser.Read('<Vector>', '<Record ID>', '<Optional: Revision ID>');
+Examples:
+
+    // Reads the latest Revision of Record 1 in Set1
+    var RawData = Warehouser.Read('/WarehouseName/Set1/1');
+
+    // Reads Revision 2 from Record 1 in Set1
+    var RawData = Warehouser.Read('/WarehouseName/Set1/1/2');
+
+## Tips & Tricks
 
 ### Designing Your Warehouses
 
-Warehouses should be structured in such a way as to divide data sets using a vectoring methodology of layered subfolders.
+Warehouses should be structured in such a way as to divide data sets using a vectoring methodology of layered subfolders. The most basic level of vectoring possible, not suitable for any activities of scale..
 
     /<Warehouse Name>/<Set Name>/<Incremental Record ID>/
     /Examples/Set1/0/ - Record 0 in Set1, contains all revisions
 
-A full record revision filename takes the format of:
+A full record revision filename takes the format of..
 
-    /<Incremental Record ID>/<Incremental Revision ID>.<Creation Timestamp>.<Creators UUID>.json
-    /Set1/0/0.1388919393.MJCD.json - Revision 0 (original) of Record 0, in Set1
-    /Set1/53/29.1388919393.MJCD.json - Revision 29 of Record 53, in Set1
-
-This relatively simple structure is fine for small or static (see below) Warehouses - however you will want to scale your complexity with increasing business requirements. By far the easiest way, and an ISO data storage standard compliant way, is to add chronological vectoring to whatever sensitivity works best for your needs.
+    /<Set Name>/<Incremental Record ID>/<Incremental Revision ID>.<Creation Timestamp>.<Creators UUID>.json
+    /Set1/0/3.1388919393.MJCD.json - Revision 3 of Record 0, in Set1
 
 Ideally, no individual vector end node should contain more than 1000 records to maintain performance (this is discussed further in the Performance section below). With that in mind, consider these in terms of "< 1000 Records created/modified within X timeframe" required for your business case when deciding what level of chronological vectoring to use..
 
@@ -84,84 +136,55 @@ Or more complex still, you have a bucket of balls any combination of: two black 
     /Sorting/Balls/Black/White/
     /Sorting/Balls/Black/Black/
 
-## Building a new Warehouse
+Starting a new Warehouse is as simple as creating a new folder within your defined Warehouse Location. Once this is done, it is technically ready for use, however you may want to review your available Schema options (below) in order to make the most of the features available.
 
-Starting a new Warehouse is as simple as creating a new folder within your defined Warehouse Location and more within for the vectoring described above on a case by case basis. Once this is done, it is technically ready for use.
+### Server Indexing
 
-## Making a request
+You can use indexing for arbitrary data requests (mainly useful for analysis queries) in many ways.
 
-Ok! So we've got our Warehouse designed how we want it, we have our Warehouser.php location configured in Warehouser.js which has been loaded into our browser through our HTML document. We're ready to start using it!
+1. Have the indexer run for a percentage of all requests. This is fine for small data sets, or highly vectored. To enable this method, open Warehouser.php in a text editor, find the variable in the configuration section near the top of the document - "WarehouserAutoIndexChance" and set it from 0 to a value from 1 to 100. A value of 100 will run it for every request, which ensures up to date index data - but may drastically slow down all requests.
 
-Warehouser.js provides it's functionality through static functionality held within window.Warehouser.
+2. You can schedule an acron/Windows Scheduler job, either through SSH, Control Panel, or through systems like cpanel to run the indexer at fixed intervals.
 
-### Warehouser.Write
-
-    Syntax: Warehouser.Write('<Vector>', <JSON Data>);
-
-    Examples:
-
-        // Writes a new record to Set1
-        Warehouser.Write('/WarehouseName/Set1', { hello: 2 });
-
-        // Writes a Revision to Record 1 in Set1
-        Warehouser.Write('/WarehouseName/Set1/1', { hello: 1 });
-
-### Warehouser.Read
-
-    Syntax: Warehouser.Read('<Vector>');
-
-    Examples:
-
-        // Reads the latest Revision of Record 1 in Set1
-        var RawData = Warehouser.Read('/WarehouseName/Set1/1');
-
-        // Reads Revision 2 from Record 1 in Set1
-        var RawData = Warehouser.Read('/WarehouseName/Set1/1/2');
+3. Manually trigger updates. You can require a password for this to work by opening Warehouser.php in a text editor, finding the variable in the configuration section near the top of the document and setting "WarehouserManualIndexPassword".
 
 ## Warehouse Security
 
 Because of its flat-file structure - for security sake, it is recommended you place your Warehouse Location folder outside your webserver's documents folder, and allow your PHP user access to that folder only. You should also disable write AND file creation access for ALL unauthorized users. I will post a guide on how to do this for Windows (NTFS) and Unix (Ext3) at a later date.
 
-### Warehouse Schema's
+Once this is complete, access will only be available through one of the client scripting languages supported (currently just PHP) - which is where Acess Control List files play a key part. It is worth noting that unlike many ACL system's - this does not use an iterative model as it would cause impractical levels of load (see "Performance" below). Instead, "_AccessControlList.json" files within each folder/vector are absolute - affecting only that one exact target.
 
-By default, your new schema will act in the most basic of capacities. Providing universal, discrete operations. Additional functionality can be added using a Schema flags file. Each Warehouse can have one Warehouse.Schema.json file directly inside the Warehouse Location folder. The following options are available for use:
+## Warehouse Schema's
 
-* "Static" Warehouses (& "Flatten")
+By default, your new schema will act in the most basic of capacities. Providing universal, discrete operations. Additional functionality can be added using a Schema flags file. Each data node can have one "_Schema.json" file directly inside. The following options are available for use:
 
-Once a warehouse has Static added to it's schema - it can no longer have new revisions created. Optionally at this time, the record can be flattened to the latest revision for speed (especially for Incremental Revisions (see below)) - however obviously data loss will occur. This operation is triggered by the Indexer (as the index also needs to be 'flattened') on the next processing cycle. Not in active development yet.
+* "Static" Warehouses
+
+Once a warehouse has Static added to it's schema - it can no longer have new revisions created. Implemented in write operations only. Not in active development yet.
 
 * "Indexed Content" Warehouses
 
-Schema's using content indexing will have their contents become searchable via the Indexer. Not in active development yet.
+Schema's using content indexing will have their contents become searchable via the Indexer. Implemented in Index Generation and Index Lookup operations. Not in active development yet.
 
 * "Slave", "To" Warehouses
 
-Slave warehouses are replication points that can be chained. They simply read changes from one source, not from any client input. Also requires the "To" property set to an accessible URL. Setting "To" without "Slave" will push changes as they occur, rather than having a slave that pulls changes. Both combinations should not be used at the same time, as this will lead to wasted sync processing. Not in active development yet.
+Slave warehouses are replication points that can be chained. They simply read changes from one source, not from any client input. Also requires the "To" property set to an accessible URL. Setting "To" without "Slave" will push changes as they occur, rather than having a slave that pulls changes. Both combinations should not be used at the same time, as this will lead to wasted sync processing. Implemented in index generation. Not in active development yet.
 
-#### Incremental Revisions
+"* Incremental Revisions"
 
-Schemas using incremental revisions will only save the differences between the current commit and the last revision. This saves space, but creates inter-dependance of records. This vastly increases risk, as if one record down the chain suffers data corruption, all subsiquent revisions will do so too. It can also vastly increase access times due to computation times. Will develop this at some point - but for now, storage is cheap and plentiful. Not in active development yet.
+Schemas using incremental revisions will only save the differences between the current commit and the last revision. This saves space, but creates inter-dependance of records. This vastly increases risk, as if one record down the chain suffers data corruption, all subsiquent revisions will do so too. It can also vastly increase access times due to computation times. Will develop this at some point - but for now, storage is cheap and plentiful. Implemented in Read AND write operations. Not in active development yet.
 
-#### Referenced Records
+* "Referenced Records"
 
-Schema's using referenced records will have all their data stored in folders with a maximum of 1000 records in each, and a reference to this record will instead be placed inside the vectors being used. This can have some serious performance impacts currently, since to remain filesystem agnostic - we cannot use symlinks. The main purpose for this is that you can have records that exist in multiple vectors. Not in active development yet.
+Schema's using referenced records will have all their data stored disjointed from their organizational vectoring/folders, and a reference to this record will instead be placed inside the vectors being used. This can have some serious performance impacts currently, since to remain filesystem agnostic - we cannot use symlinks. The main purpose for this is that you can have records that exist within multiple vectors. Implemented in read AND write operations. Not in active development yet.
 
-#### Redactable
+* "Redactions Allowed"
 
-Allows entire records to be redacted (entirely deleted). Much later in development, when Indexed Content is completed, strings will be able to be redacted while keeping all revisions otherwise intact. This would be useful for removing data such as people's names. Not in active development yet.
+Allows entire records to be redacted (entirely deleted). Much later in development, when Indexed Content is completed, strings will be able to be redacted while keeping all revisions otherwise intact. This would be useful for removing data such as people's names. Without this, this action is not possible, as documents are not writable, only revisable. Data that has been modified after the fact will be labeled as such clearly, with the UUID of the user(s) redacting. Implemented in write operations only. Not in active development yet.
 
-#### Encrypt
+* "WriteLocking" & "ReadLocking"
 
-Encryption will be able to be applied to allow either single users, many users, or whole access groups limited readability to any given vector. Not in active development yet.
-
-## Optional: Server Indexing
-
-You can use indexing for arbitrary data requests (mainly useful for analysis queries) in many ways. A single warehouse
-
-1. Have the indexer run for every request. This is fine for small data sets, or highly vectored
-2. Trigger the indexer for a certain percentage of all read requests. This will not delay the client from continuing, the main side effect is that it can be uncertain how old the index data is
-2. You can schedule an acron job, either through SSH or through systems like cpanel to run the indexer at fixed intervals
-3. Manually trigger updates (with a simple password)
+Enables per-node locking for read and write operations.
 
 ## Performance
 
