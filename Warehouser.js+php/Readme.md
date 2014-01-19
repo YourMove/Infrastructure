@@ -9,9 +9,19 @@
 
 ## Forward
 
-**Warehouser** is an incredibly light weight single purpose library for storing and retrieving data. Unlike most data warehouses, no dedicated database server is needed, without sacrificing any data security. We ensure this through an iterative data model, which maintains data as discrete, unique writes. It also offers an respectable indexer library (Warehouser.Indexer) which provides an abstract queryable interface. You can even search within records from the index (if the schema allows, discussed below). This Indexing functionality can be configured to run in varying methods.
+**Warehouser** is an incredibly light weight single purpose library for storing and retrieving data. Unlike most data warehouses, no dedicated database server is needed, without sacrificing any data security. We ensure this through an iterative data model, which maintains data as discrete, unique writes.
 
-Data is stored in regular folder structures, with an end node constituting a folder containing only folders (no files), with each folder inside ONLY containing files (no folders). Each file in this end node folder is itself a discrete record. Individual records are stored in JSON format, and thus have compatability with a vast array of languages and libraries. It is also filesystem agnostic - meaning it does not rely on any abstract features of any one filesystem. Use whatever filesystem you prefer! It also does not rely on filesystem meta-data for data integrity purposes (creation/modification times) - which means it is safe to copy these files to remote servers directly without risking meta-data loss.
+### Light core, Plug and play tools
+
+To keep Warehouser light weight, and custom built to your applications needs without sacrificing functionality - there are numerous additional tools able to be used simply by saving them in the same folder as your Warehouser.php.
+
+#### Indexer
+
+Warehouser.Indexer provides an abstract queryable interface. You can even search within records from the index (if the schema allows, discussed below). This Indexing functionality can be configured to run in varying methods to meet differing requirements.
+
+#### Client
+
+Warehouser.Client provides a GUI-based set up, design, editing and management toolkit. It is invaluable when getting started, but as data is stored in regular folder structures, this is not at all REQUIRED.
 
 ## Core Features
 
@@ -19,7 +29,7 @@ Data is stored in regular folder structures, with an end node constituting a fol
 * Iterative, document centric model
 * Easy to set up, no dedicated server!
 
-## Requires
+## Requirements
 
 * A HTTP webserver (Apache, etc) 
 * Capability of executing PHP scripts for write capabilities
@@ -28,25 +38,24 @@ Data is stored in regular folder structures, with an end node constituting a fol
 
 ## Getting Started
 
-Preface: I understand this seems quite complicated, however the practices described are for **your security**. Please read them carefully. I will do an instructional video for Windows and Linux at some point.
+1. Download the backend processor - "Warehouser.php" above.
 
-1. Download the backend processor - "Warehouser.php" above (0.1 is current version).
+2. Copy/move this within it's own folder somewhere inside your webservers documents folder. 
 
-2. Copy/move this within it's own folder somewhere inside your webservers documents folder (it can be inside a folder, etc). It is recommended to use "<Document Root>/Warehouser/Warehouser.php", as there are a few extra utility scripts you may end up wanting, and this will keep it all together.
+It is recommended to use "<Document Root>/Warehouser/Warehouser.php", as you may end up wanting to use the extra tools, and this will keep it all together.
 
-3. Create a folder OUTSIDE your webservers documents folder. Anywhere is fine, however you will need to note down its location for the next step. It is recommended to use with the example in step 2; "../../Warehouses/", two folders above - in the same folder that contains your webservers document root for security, however this is not required for entirely public data sets.
+3. Edit Warehouser.php with your favourite editor (I like/use Sublime Text) - within the configuration section at the top, set where your Warehouses are to be stored (folder must exist).
 
-4. Open "Warehouser.php" in a text editor.
+4. Set up relevant permissions depending on your webserver and/or configuration. 
 
-5. Go to line 10 and enter that location in as the value for WarehouseLocation. By default (and as per points 2 and 3 above) this will be set to a folder named "../../Warehouses/", two folders upwards from the folder Warehouser.php is in.
+A .htaccess file has been created for Apache to protect this folder for you. Later, session-based, cookie-based, SSL-based and HTTP-based methods will be supported able to be plugged into most existing applications.
 
-6. Depending on your operating system, and because you have placed this folder OUTSIDE your webservers document root - you will need to grant the appropriate permissions to your webserver's user (if running PHP as a server-plugin (SAPI)) or as whichever user your PHP cgi/fcgi runs as. I will post a guide for this for the common distributions and Windows at a later date, however googling this if you are not already aware how to do this will yield many great resources.
+5. For the front end library you can either:
 
-7. For the front end library you can either:
+* Save the library from the link above, and link to it locally. With this method, you can edit "Warehouser.js", find the configuration section and set "Warehouser.Source".
 
-* Save the library from the link above, and link to it locally. With this method, you can edit "Warehouser.js", find the configuration section and set window.WarehouserSource.
+Alternatively **(Recommended)**
 
-* **(Recommended)**
 * Load Warehouser.js with Bootstrapper.html (<insert link here>) using the following resource line:
 
     {
@@ -60,17 +69,13 @@ Now you have your back and front end ready, it's time to add something to work w
 
 * Using "./Warehouser.Client.php"
 
-You can grab this script from the same place you got your version of Warehouser from. It provides a dedicated editor and data set viewer, accessible from any browser. Though it is a PHP file, it also contains a clean and responsive JavaScript front-end library.
-
 This client will enforce the design methodology discussed below in "Designing Your Warehouse", so it is highly recommended to start with.
 
-To get started, grab the PHP file from the same version folder you got your "Warehouser.php", and save it into the same folder. No further configuration is needed (not even setting the WarehouseLocation!), then load it up from your browser.
+To get started, grab the PHP file from [Here]"Warehouser.php", and save it into the same folder as Warehouser.php. It is loaded through "http://Example.Site/Warehouser.php?Client".
 
 * Manually
 
-One of the advantages of the open file structure of Warehouser is that you can manipulate warehouses directly within your filesystem. Please see the Security section below for advice on how to maintain data security.
-
-# Relax, the hard part is over. Using Warehouser is remarkably easy.
+One of the advantages of the open file structure of Warehouser is that you can manipulate warehouses directly within your filesystem. Please see the Security section below for advice on how to maintain data security, as well as Warehouse Design.
 
 ## Making a request
 
@@ -154,6 +159,8 @@ Because of its flat-file structure - for security sake, it is recommended you pl
 
 Once this is complete, access will only be available through one of the client scripting languages supported (currently just PHP) - which is where Acess Control List files play a key part. It is worth noting that unlike many ACL system's - this does not use an iterative model as it would cause impractical levels of load (see "Performance" below). Instead, "_AccessControlList.json" files within each folder/vector are absolute - affecting only that one exact target.
 
+Through these you will also be able to set permissions for things like new records.
+
 ## Warehouse Schema's
 
 By default, your new schema will act in the most basic of capacities. Providing universal, discrete operations. Additional functionality can be added using a Schema flags file. Each data node can have one "_Schema.json" file directly inside. The following options are available for use:
@@ -182,9 +189,32 @@ Schema's using referenced records will have all their data stored disjointed fro
 
 Allows entire records to be redacted (entirely deleted). Much later in development, when Indexed Content is completed, strings will be able to be redacted while keeping all revisions otherwise intact. This would be useful for removing data such as people's names. Without this, this action is not possible, as documents are not writable, only revisable. Data that has been modified after the fact will be labeled as such clearly, with the UUID of the user(s) redacting. Implemented in write operations only. Not in active development yet.
 
-* "WriteLocking" & "ReadLocking"
+* "Record Locking"
 
-Enables per-node locking for read and write operations.
+Enables per-node locking for read and write operations. This can be useful for example for preventing more than one person from creating revisions at one time, which can essentially lead to data loss without consolidation.
+
+* "Separate Read/Write"
+
+This mode will read from a different vector than is written to, in symetrically spanning vector tree's. The purpose of this mainly is to allow a methodology where by submitted revisions or new records must be approved by a central body before becoming 'live'.
+
+* "Named Records" & "Named Revisions"
+
+Allows names to be defined, either as a static list of available names, or as dynamic user input, rather than simply consecutively numbered.
+
+* "Appended Records"
+
+Allows records to be APPENDED to without any modifications to prior contents. This can be handy for logs, etc.
+
+Some examples of these used would be
+
+    /ExampleWarehouse/Vector1/Home/1/
+    /ExampleWarehouse/Vector1/Home/52/
+    /ExampleWarehouse/Vector1/Home/DRAFT/
+    /ExampleWarehouse/Vector1/Home/EDIT/
+    /ExampleWarehouse/Vector1/Home/PUBLISH/
+    /ExampleWarehouse/Vector1/Home/CORRECTIONS/
+
+You will also be able to go backwards and forwards between these stages as required - for example if a record is pushed back from publishing to the editor.
 
 ## Performance
 

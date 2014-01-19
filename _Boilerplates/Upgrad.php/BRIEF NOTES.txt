@@ -1,0 +1,9 @@
+Upgrad is a tool for managing boilerplate documents within a folder.
+
+It is designed to be non-destructive to any actual code/documentation as long as boilerplate sections are not modified by a third party.
+
+With this tool, and the associated client - it is easy to set up your own skeleton projects and then later, modify terms, licencing and branding over time with but a click.
+
+The use of this will be mandated for all YMI contributions, and the Contributions guide updated to reflect this.
+
+It will also allow any compliant (using boilerplate) files to be updated manually from a designated repository (with support built into Bootstrapper) but also automatically via subscription.
