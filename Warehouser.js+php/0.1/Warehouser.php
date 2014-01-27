@@ -1,6 +1,6 @@
 <?php
 
-// <Project> / <Filename>.js - <Short Document Title>
+// Warehouser / Warehouser.php - All in one
 //   YourMove Infrastructure (Boilerplate 0.1)
 //   Published <Publish date, Day/MM/Year>
 //   All rights reserved.

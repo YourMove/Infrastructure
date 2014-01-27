@@ -13,15 +13,9 @@
 
 ### Light core, Plug and play tools
 
-To keep Warehouser light weight, and custom built to your applications needs without sacrificing functionality - there are numerous additional tools able to be used simply by saving them in the same folder as your Warehouser.php.
+To keep Warehouser light weight, and custom built to your applications needs without sacrificing functionality - there are numerous additional tools able to be used simply by putting them in the same folder.
 
-#### Indexer
-
-Warehouser.Indexer provides an abstract queryable interface. You can even search within records from the index (if the schema allows, discussed below). This Indexing functionality can be configured to run in varying methods to meet differing requirements.
-
-#### Client
-
-Warehouser.Client provides a GUI-based set up, design, editing and management toolkit. It is invaluable when getting started, but as data is stored in regular folder structures, this is not at all REQUIRED.
+#### Resource
 
 ## Core Features
 
@@ -77,6 +71,24 @@ To get started, grab the PHP file from [Here]"Warehouser.php", and save it into 
 
 One of the advantages of the open file structure of Warehouser is that you can manipulate warehouses directly within your filesystem. Please see the Security section below for advice on how to maintain data security, as well as Warehouse Design.
 
+## Client Specifics
+
+### Connection
+
+The JavaScript client supports many methods of connection.
+
+* "AJAX". This is the standard method as it represents the highest level of compatability (virtually any browser). It only requires you to define the API URL (Warehouser.php). This method is most useful for event-driven tasks (such as say, writing something when the user clicks a button).
+
+* "Longpolling". This method is most useful for realtime operations (such as streaming data to and from games).
+
+* "Websockets". Not sure if these will be implemented, since I don't think there would be a great benefit within the scope of this project. This is not an inter-program communication library, after all. Perhaps this will be considered for a future YMI library.
+
+Depending on the Warehouses schema configuration, you may or may not require a Key for read or write access. Eventually, you will be able to get these API keys through a query to the same API host (Warehouser.php) if the schema allows it, otherwise the requests will fail until either a key is automatically granted to your client, or you configure one into your Warehouser.js distribution.
+
+Until then, it is generally speaking something the developer will either know, or will be able to contact someone who knows, or probably shouldn't have access (heh).
+
+
+
 ## Making a request
 
 Warehouser.js provides it's functionality through static functionality held within "window.Warehouser".
@@ -103,7 +115,24 @@ Examples:
     // Reads Revision 2 from Record 1 in Set1
     var RawData = Warehouser.Read('/WarehouseName/Set1/1/2');
 
-## Tips & Tricks
+## Server Specifics
+
+Much like the client, the API host has many configuration options.
+
+* Performance Monitoring. This can be enabled to track metrics like requests per minute, etc etc. This will be REQUIRED for some schema's such for load balancing, however it is disabled by default as it will degrade performance. It can be enabled in real time in the event where these metrics become important, however beware that this will further degrade performance.
+
+### Tools
+
+Many tools are available to add to the Warehouser experience.
+
+* Indexer. Provides an abstract queryable interface. You can even search within records from the index (if the schema allows, discussed below). This Indexing functionality can be configured to run in varying methods to meet differing requirements.
+
+* Client. Provides a GUI-based set up, design, editing and management toolkit. It is invaluable when getting started, but as data is stored in regular folder structures, this is not at all REQUIRED.
+
+## Advanced
+
+#### IMPORTANT NOTE
+It is highly advisable to use Warehouser.Client.php which provides a GUI, negating the need to think about any of the below. I do however recommend still reading the below to familiarise yourself with the storage methodology and preferred limitations.
 
 ### Designing Your Warehouses
 
@@ -141,7 +170,7 @@ Or more complex still, you have a bucket of balls any combination of: two black 
     /Sorting/Balls/Black/White/
     /Sorting/Balls/Black/Black/
 
-Starting a new Warehouse is as simple as creating a new folder within your defined Warehouse Location. Once this is done, it is technically ready for use, however you may want to review your available Schema options (below) in order to make the most of the features available.
+Starting a new Warehouse is as simple as creating a new folder within your defined Warehouse Location. Once this is done, it is technically ready for use, however you may want to review your available Schema options (below) in order to make the most of the features available. You may also need to consider security of this folder if it is within your webserver - as it may be directly accessible, which you may or may not find desirable.
 
 ### Server Indexing
 
@@ -165,6 +194,24 @@ Through these you will also be able to set permissions for things like new recor
 
 By default, your new schema will act in the most basic of capacities. Providing universal, discrete operations. Additional functionality can be added using a Schema flags file. Each data node can have one "_Schema.json" file directly inside. The following options are available for use:
 
+* "IP Security"
+
+These rules can be either wildcard IP addresses (eg, 192.10.1.*) or using complex ranges (eg, 192.10.1.[41,63-67]). The same can be performed with a subnet (eg, 192.10.1.1/255.255.0.0) however this is not required, it can be useful for ensuring that internal ONLY resources. This is not yet implemented or in active development.
+
+* "Session Security"
+
+This will be what most people will prefer to use as it will be capable of tying into nearly any existing system's auth. Warehouser.php provides no auth mechanism as this is outside the scope of the library. 
+
+Essentially the concept is to check a session variable is set, and based on this assume the user is auth'd. Whatever is in this variable will form the users id, so it at least should be a unique variable - if not one identifiable to a particular user.
+
+An example would be, I have "webapp1.php", this sets "$_SESSION['UID'] = 'MJCD';" upon login. This would be a prime choice for use as this option. By default anonymous access is allowed to all resources, and without a schema, only revisions will be writable, meaning data loss is extremely unlikely.
+
+This is not yet implemented or in active development but will come first.
+
+* "Key Security"
+
+This provides a way to issue keys for specific vectors or warehouses that have either read-only, write-only or both access levels assigned to them. These can be centrally managed and can be very secure. Eventually, these will be able to be complex PGP keys referenced from an external location/store, for now they are just simple strings. This is not yet implemented or in active development.
+
 * "Static" Warehouses
 
 Once a warehouse has Static added to it's schema - it can no longer have new revisions created. Implemented in write operations only. Not in active development yet.
@@ -180,7 +227,7 @@ Slave warehouses are replication points that can be chained. They simply read ch
 "* Incremental Revisions"
 
 Schemas using incremental revisions will only save the differences between the current commit and the last revision. This saves space, but creates inter-dependance of records. This vastly increases risk, as if one record down the chain suffers data corruption, all subsiquent revisions will do so too. It can also vastly increase access times due to computation times. Will develop this at some point - but for now, storage is cheap and plentiful. Implemented in Read AND write operations. Not in active development yet.
-
+ 
 * "Referenced Records"
 
 Schema's using referenced records will have all their data stored disjointed from their organizational vectoring/folders, and a reference to this record will instead be placed inside the vectors being used. This can have some serious performance impacts currently, since to remain filesystem agnostic - we cannot use symlinks. The main purpose for this is that you can have records that exist within multiple vectors. Implemented in read AND write operations. Not in active development yet.
@@ -201,6 +248,10 @@ This mode will read from a different vector than is written to, in symetrically 
 
 Allows names to be defined, either as a static list of available names, or as dynamic user input, rather than simply consecutively numbered.
 
+* "Flat Records"
+
+Records will no longer be folders full of revisions, instead just single files. Only atomic read/writes allowed.
+
 * "Appended Records"
 
 Allows records to be APPENDED to without any modifications to prior contents. This can be handy for logs, etc.
@@ -215,6 +266,24 @@ Some examples of these used would be
     /ExampleWarehouse/Vector1/Home/CORRECTIONS/
 
 You will also be able to go backwards and forwards between these stages as required - for example if a record is pushed back from publishing to the editor.
+
+* "Memory Resident"
+
+Warehouse will ONLY be kept within memory. This is the highest performance method available but data can be lost with power loss, and can balloon out your memory usage. You can set a memory limit, however this will result in hard errors if/when this is hit.
+
+These are mainly good for disposable data, or data where in the event of an error - may not be fit for processing anyway, such as runtime data between binaries, where it is probably easier/better to start over.
+
+* "Memory Redundant"
+
+This will be by far the most highly leveraged type once implemented. The idea of this schema is to leverage 3 independant technologies for the absolute minimization of transactional latency for the most accessed resources within a given timeframe. Resources within this schema will automatically balance between:
+
+1. OPTIONAL - Top level storage - RAM. This will be where the absolutely most used resources will be stored up to a given limit. As the name suggests, these will be REDUNDANT resources, loaded from disk if not found in memory.
+
+2. OPTIONAL - Read-optimized SSD. This is an optional functionality, but ideally at least 1 SSD will be available for use with any high-demand resources that cannot fit into RAM, as well as any medium demand resources.
+
+As an additional layer we will refer to as 2.5 would be the use of an SSD with built in RAM that transparently performs its own balancing and redundancy. This will in effect give a primary memory (top level - 1), a secondary memory (2.5) and a second level SSD with just the correct selection of hardware.
+
+3. Archival - Traditional Platter-Based Magnetic Storage. All resources that cannot fit into any of the above will fall into this category. A lot of low traffic Warehouses will ONLY use Level 3 storage, however one should consider the performance implications listed below in this document.
 
 ## Performance
 
