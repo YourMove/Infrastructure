@@ -1,0 +1,37 @@
+<html>
+
+	<head>
+
+	<!-- Warehouser / Specification/1/Tests/1/TestClient.html - A simple Warehouser skeleton
+	     YourMove Infrastructure (Boilerplate 0.1)
+	     Published 27/01/2014
+	     All rights reserved.                                                                   -->
+
+		<style type="text/css"></style>
+		<script type="text/javascript">console.log('YMI: Loading Warehouser.js');</script>
+		<script type="text/javascript" src="./Warehouser.js"></script>
+		<script type="text/javascript">
+
+			console.log('YMI: Defining tests');
+			// Wait until warehouser is loaded
+			var PerformTest = function () {
+				if (typeof Warehouser !== 'undefined') {
+
+					console.log('YMI: Performing test..');
+					console.log(Warehouser.Read('Example1/','13923879883263582642'));
+
+				}
+				else setTimeout(PerformTest, 5);
+			};
+			PerformTest();
+			console.log('YMI: Waiting for Warehouser.js');
+
+		</script>
+		
+	</head>
+
+	<body>
+		<!-- Content here -->
+	</body>
+
+</html>

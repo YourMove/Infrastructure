@@ -17,7 +17,11 @@ class Warehouser {
 	// Warehouser.php/2. Provide some configuration
 
 	// Warehouser.php/2.1 Allow definition of the main warehouse storage root
-	public static $StoragePath = './Warehouses/';
+	public static $StoragePath = '../Specifications/1/Tests/_TestWarehouse/';
+
+	// Warehouser.php/<nospec> Allow for basic error/performance tracking
+	public static $OperationTimeout = 5; // Seconds
+	public static $MaxEndnodeScan = 5;  // 5 results will be checked to try and find an end node when scanning.
 
 	// Warehouser.php/2.3 Performance monitoring options [Not yet implemented]
 	public static $PerformanceMonitoring = array(
@@ -67,89 +71,93 @@ class Warehouser {
 
 	// Warehouser.php/4. Define a path validity and consistency function that can also be used for finding the last record
 	// Warehouser.php/4(...) or revision in a path.
-	private static function SearchVector ($Vector, $Limit=1, $BaseName=TRUE) {
+	private static function SearchVector ($Vector, $OnlyDir=FALSE, $ReverseSort=TRUE) {
 
 		// Warehouser.php/4.1 Check that the path exists and is readable
 		if (file_exists($Vector) && is_readable($Vector)) {
 
 			// Warehouser.php/4.1 Search the path (vector) for all files/folders
-			$Nodes = glob($Vector.'/*');
+			if ($OnlyDir === FALSE) $Nodes = glob($Vector.'/*.json');
+			else $Nodes = glob($Vector.'/*', GLOB_ONLYDIR);
+
 			// Warehouser.php/4.2 Naturally sort - this means 1-11 rather than 1, 11, 2-9
-			natsort($Nodes);
+			if ($ReverseSort === TRUE) rsort($Nodes);
+			else sort($Nodes);
 
 			// Warehouser.php/4.3 Check if there are any nodes found
-			if (count($Nodes) > 0) {
+			if (count($Nodes) > 0)
+				return basename(array_pop($Nodes));
 
-				// Warehouser.php/4.4 If there is a Limit of 1, just return last straight away
-				if ($Limit == 1) {
-					if ($BaseName == TRUE) return basename(array_pop($Nodes));
-					else return array_pop($Nodes);
-				}
-
-				else {
-					// Warehouser.php/4.5 Otherwise, keep getting records from the end until the limit and return all
-					$Return = array();
-					while ($Limit > 0 && empty($Nodes) == FALSE) {
-						$Return[] = array_pop($Nodes); $Limit = $Limit - 1;
-					}
-					return $Return;
-				}
-			}
 		}
 
-		return 0;
+		return NULL;
 
 	}
 
 	// Warehouser.php/5. Define the read function of the API
-	public static function Read ($Vector='', $Optional_Record=FALSE, $Optional_Revision=FALSE) {
+	public static function Read ($Vector='', $Optional_Record='', $Optional_Revision='') {
 
-		// Prepend our path on to the vector
-		$Vector = Warehouser::$StoragePath.$Vector;
+		// Warehouser.php/<nospec> Add working dir to vector
+		$Vector = Warehouser::$StoragePath.'/'.$Vector;
 
 		// Warehouser.php/5.1 If no Record ID given, use search function to get the last record in the path/vector (...)
-		if ($Optional_Record == FALSE) {
-			$Optional_Record = Warehouser::SearchVector($Vector);
-			// Warehouser.php/5.1.1 If no Record at all found, this is a fatal error.
-			if ($Optional_Record == FALSE) return 'Warehouser.php/5.1.1: No records found in vector '.$Vector;
+		$AllowSpecificRevision = TRUE;
+		if ($Optional_Record == '') {
+
+			// Warehouser.php/5.1: Note: There must be at least one 
+			$Optional_Record = Warehouser::SearchVector($Vector, TRUE);
+			if ($Optional_Record === NULL) return 'Warehouser.php/5.1 No records found in vector.. '.$Vector;
+			else $AllowSpecificRevision = FALSE;
+
 		}
+
 		// Warehouser.php/5.1.2 Filter into vector.
 		$Vector = $Vector.'/'.filter_var($Optional_Record, FILTER_SANITIZE_STRING);
 
-		// Warehouser.php/5.2 If no Revision ID given, use search function to get the last revision in the complete path/vector
-		if ($Optional_Revision == FALSE) {
-			$Optional_Revision = Warehouser::SearchVector($Vector);
+		// Warehouser.php/5.2 If Record ID given and no Revision ID given, use search function to get the (...)
+		// Warehouser.php/5.2(...) last revision in the complete path/vector.
+		if ($AllowSpecificRevision === TRUE && $Optional_Revision != '')
+			$Vector = $Vector.'/'.rtrim(filter_var($Optional_Revision, FILTER_SANITIZE_STRING), '.json').'.json';
+
+		// Warehouser.php/<nospec> This conditional below can be removed if we're happy to have no warning
+		else if ($AllowSpecificRevision === FALSE && $Optional_Revision != '')
+			return 'Warehouser.php/5.2.1 Warning: You cannot read a specific revision of a record retrieved by searching..';
+
+		else {
+
+			// Warehouser.php/5.2.1 Search for revision
+			$Revision = Warehouser::SearchVector($Vector, FALSE, FALSE);
+
 			// Warehouser.php/5.2.1 If no record at all, this is a fatal error.
-			if ($Optional_Revision == FALSE) return 'Warehouser.php/5.2.1 Invalid vector.. '.$Vector;
+			if ($Revision === NULL) return 'Warehouser.php/5.2.1 Invalid vector, no revisions - vector deeper?.. '.$Vector;
+			else $Vector = $Vector.'/'.filter_var($Revision, FILTER_SANITIZE_STRING);
+
 		}
-		// Otherwise just append file extension
-		else $Optional_Revision = $Optional_Revision.'.json';
 
-		// Warehouser.php/5.2.2 Filter into vector.
-		$Vector = $Vector.'/'.filter_var($Optional_Revision, FILTER_SANITIZE_STRING);
-
-		// Warehouser.php/5.2.3 Final sanity check
-		if (file_exists($Vector) == FALSE || is_readable($Vector) == FALSE) return 'Warehouser.php/5.2.3: Invalid vector.. '.$Vector;
+		// Warehouser.php/5.2.1 Final sanity check
+		if (file_exists($Vector) === FALSE || is_dir($Vector) === TRUE || is_readable($Vector) === FALSE)
+			return 'Warehouser.php/5.2.1 Invalid vector (unknown cause).. '.$Vector;
 
 		// Warehouser.php/5.3 Read now complete path/vector/record/revision out to the browser immediately
-		if (($Data = file_get_contents($Vector)) == FALSE) return 0;
-		else return $Data;
+		if (($Data = file_get_contents($Vector)) != FALSE) return $Data;
+		else return 'Warehouser.php/5.2.3: Failed to read (unknown cause).. '.$Vector;
 
 	} // End Warehouser->Read();
 
 	// Warehouser.php/6. Define the write function of the API
-	public static function Write ($RawData='', $Vector='', $Optional_Record=FALSE) {
+	public static function Write ($RawData='', $Vector='', $Optional_Record='') {
+
+		// Warehouser.php/<nospec> Add working dir to vector
+		$Vector = Warehouser::$StoragePath.'/'.$Vector;
 
 		// Warehouser.php/6.1 Sanitize data provided
 		$Data = filter_var($RawData, FILTER_UNSAFE_RAW);
-		// Warehouser.php/<nospec> Add working dir to vector
-		$Vector = Warehouser::$StoragePath.$Vector;
 
 		// Warehouser.php/6.2 Error check provided vector to ensure it is valid and writable
 		if (file_exists($Vector) == FALSE && is_writable($Vector) == FALSE) exit('Warehouser.php/6.2: Fatal Server Error ... '.$Vector);
 
 		// Warehouser.php/6.3 Check if Record ID provided
-		if ($Optional_Record == FALSE) {
+		if ($Optional_Record == '') {
 			// Warehouser.php/6.4(...) Create new record as the current microtime with a random fragment appended 
 			$Vector = $Vector.'/'.(str_replace('.', '', str_replace(' ', '', microtime(TRUE)))).rand(0,1000000).'/';
 			if ((@mkdir($Vector)) == FALSE) exit('Warehouser.php/6.4: Fatal Server Error');
@@ -168,7 +176,7 @@ class Warehouser {
 		$Vector = $Vector.(str_replace('.', '', str_replace(' ', '', microtime(TRUE)))).rand(0,1000000).'.json';
 
 		// Warehouser.php/6.8 Perform atomic write operation.
-		if (file_put_contents($Vector, $Data) === FALSE) return 0;
+		if (file_put_contents($Vector, $Data) === FALSE) return 'Warehouser.php/6.8: Failed to write.. '.$Vector;
 		else return $Vector;
 
 	} // End Warehouser->Write();
@@ -195,7 +203,7 @@ if (!empty($_POST) && !empty($_POST['Data'])) {
 			$Request['Type_LI'] = strtolower($Request['Type'][0]);
 
 			// Warehouser.php/10.3 If there is no Vector type, use falsy value
-			if (!isset($Request['Vector'])) $Request['Vector'] = 0;
+			if (!isset($Request['Vector'])) $Request['Vector'] = '';
 
 			// Warehouser.php/10.3 If there is no Record ID, use falsy value
 			if (!isset($Request['Record'])) $Request['Record'] = 0;

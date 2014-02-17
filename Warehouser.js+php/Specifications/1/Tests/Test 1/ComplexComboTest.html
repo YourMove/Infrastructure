@@ -1,0 +1,55 @@
+<html>
+
+	<head>
+
+	<!-- Warehouser / Specification/1/Tests/1/WriteTest.html - A simple Warehouser skeleton
+	     YourMove Infrastructure (Boilerplate 0.1)
+	     Published 27/01/2014
+	     All rights reserved.                                                                   -->
+
+		<style type="text/css"></style>
+		<script type="text/javascript">console.log('YMI: Loading Warehouser.js');</script>
+		<script type="text/javascript" src="./Warehouser.js"></script>
+		<script type="text/javascript">
+
+			console.log('YMI: Defining tests');
+			// Wait until warehouser is loaded
+			var Batch = 0;
+			var PerformTest = function () {
+				if (typeof Warehouser !== 'undefined' && Batch < 3 && Warehouser.Locked == false) {
+
+					if (Batch == 0) {
+						console.log('YMI: Performing test.. (Read Two, Write Two in Two Batches)');
+						console.log(Warehouser.StopMonitoring());
+					}
+
+					else if (Batch == 1) {
+						console.log(Warehouser.Write('Combo test', 'Example1/', '13923879883263582642'));
+						console.log(Warehouser.Read('Example1/', '13923879883263582642'));
+						console.log(Warehouser.Send());
+
+					}
+
+					else if (Batch == 2) {
+						console.log(Warehouser.Write('Combo test 2', 'Example1/', '13923879883263582642'));
+						console.log(Warehouser.Read('Example1/', '13923879883263582642'));
+						console.log(Warehouser.Send());
+					}
+
+					Batch = Batch+1;
+
+				}
+				setTimeout(PerformTest, 5);
+			};
+			PerformTest();
+			console.log('YMI: Waiting for Warehouser.js');
+
+		</script>
+		
+	</head>
+
+	<body>
+		<!-- Content here -->
+	</body>
+
+</html>

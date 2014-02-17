@@ -10,7 +10,7 @@ var Warehouser = {
 
 	API: {
 		// Warehouser.js/2.1 Provide a string to set the HTTP-accessible API url (Warehouser.php by default)
-		URL: './Warehouser.php',
+		URL: 'http://localhost/Warehouser.js+php/0.4/Warehouser.php',
 		// Warehouser.js/2.2 Provide a keychain (empty by default)
 		Keys: []
 	},
@@ -176,7 +176,7 @@ var Warehouser = {
 		// Warehouser.js/7.1 Start formatting new request construct
 		var RequestObject = {
 			Type: 'Read', // Warehouser.js/7.1.1 Add request type to new construct.
-			Vector: Vector || 0 // Warehouser.js/7.1.2 If no vector is given default to falsy value
+			Vector: Vector || '' // Warehouser.js/7.1.2 If no vector is given default to falsy value
 		};
 
 		// Warehouser.js/7.2 Add the Record ID to the construct (if any)
@@ -185,13 +185,13 @@ var Warehouser = {
 
 			// Warehouser.js/7.2.1 (...) Add the Revision ID (if any).
 			if (typeof Optional_Revision !== 'undefined') RequestObject.Revision = Optional_Revision;
-			// Warehouser.js/7.2.1.1 If there is none, fill revision with falsy value.
-			else RequestObject.Revision = 0;
+			// Warehouser.js/7.2.1.1 If there is none, fill revision with empty string
+			else RequestObject.Revision = '';
 
 		}
 
-		// Warehouser.js/7.2.2 If there is no Record ID, fill both Record and Revision with falsy values.
-		else { RequestObject.Record = 0; RequestObject.Revision = 0; }
+		// Warehouser.js/7.2.2 If there is no Record ID, fill both Record and Revision with empty strings
+		else { RequestObject.Record = ''; RequestObject.Revision = ''; }
 
 		// Warehouser.js/7.3 Push request construct to processing queue
 		Warehouser.Queue.push(RequestObject);
@@ -204,19 +204,19 @@ var Warehouser = {
 		// Warehouser.js/8.1 Start formatting new request construct
 		var RequestObject = {
 			Type: 'Write', // Warehouser.js/8.1.1 Add request type to new construct.
-			Vector: Vector || 0 // Warehouser.js/8.1.2 If no vector is given, use falsy value.
+			Vector: Vector || '' // Warehouser.js/8.1.2 If no vector is given, use empty string
 		};
 
 		// Warehouser.js/8.2 Fork for different types of Data
 
 		// Warehouser.js/8.2.1 If Data is an object, JSON encode
 		if (typeof RawData === 'object') RequestObject.Data = JSON.stringify(RawData);
-		// Warehouser.js/8.2.2 Otherwise, Use value as is (if any, otherwise default: Empty String)
+		// Warehouser.js/8.2.2 Otherwise, Use value as is (if any, otherwise default: empty string)
 		else RequestObject.Data = RawData || '';
 		// Warehouser.js/8.3 Add the Record ID to the construct (if any)
 		if (typeof Optional_Record !== 'undefined') RequestObject.Record = Optional_Record;
-		// WArehouser.js/8.3.1 If none, use falsy value.
-		else RequestObject.Record = 0;
+		// WArehouser.js/8.3.1 If none, use space.
+		else RequestObject.Record = '';
 
 		// Warehouser.js/8.4 Push request construct to processing queue
 		Warehouser.Queue.push(RequestObject);
