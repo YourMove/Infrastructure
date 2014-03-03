@@ -20,20 +20,28 @@ var Warehouser = {
 
 		Type: 'AJAX', // Warehouser.js/2.3.1 AJAX (default), 2.3.2 COMET/longpoll
 
-		// Warehouser.js/2.4 Configurable connection tolerance
+		// Warehouser.js/2.4 Configurable connectio  tolerance
 		Timeout: 2, // Warehouser.js/2.4.1 Connection timeout in seconds.
 		Retry: 0, // Warehouser.js/2.4.2 Retry failed requests X times.
 		Limit: 10, // Warehouser.js/2.4.3 Limit to this many requests (...)
 		Window: 10 // Warehouser.js/2.4.4(...) window period in seconds.
+
 	},
 
 	// Warehouser.js/2.5 Configurable request batching
 	Bundling: {
-		Limit: 1, // Warehouser.js/2.5.1 Bundle limit in request count.
-		Timeout: 10, // Warehouser.js/Bundle timeout in seconds - will send in this time even if not full.
+
+		Limit: 1, // Warehouser.js/2.5.1 Bundle limit in request count. Note that deferred requests are added on TOP of this.
+		Deferrals: 20, // Warehouser.js/<nospec> Going over this limit will cause requests to be lost. Set to 0 or false to disable.
+
+		Window: 10, // Warehouser.js/<nospec> Bundle window in seconds - will send in this time even if not full. Set to 0 or false to disable.
+
 		// Warehouser.js/2.5.3 Allow empty - will submit timed out bundles even if empty. (...)
 		// Warehouser.js/2.5.3(...) Good if you don't know if there is data you need or not.
-		AllowEmpty: false 
+		// Warehouser.js/2.5.3(addition) Note: If bundling window is enabled and allow empty is true, will continually send empty 
+		// Warehouser.js/2.5.3(addition)(..) requests. Good when you constantly need to receive data but only occasionally send.
+		AllowEmpty: false
+
 	},
 
 	// Warehouser.js/2.6 Configurable request monitoring
@@ -48,24 +56,41 @@ var Warehouser = {
 
 	Current: {},
 	Queue: [],
+	Deferred: [],
+
 	LastRun: false,
 	Locked: false,
 	RequestObject: false,
-	DaemonTimer: false,
 
 	// Warehouser.js/4. Provide functionality to start the monitoring function
-	// Warehouser.js/4.1 Do not take any action if already started.
-	StartMonitoring: function () { if (Warehouser.DaemonTimer === false) Warehouser.DaemonTimer = setTimeout(Warehouser.MonitorDaemon, 1); },
-	// Warehouser.js/5. Provide functionality to stop monitoring
-	// Warehouser.js/5.1 Do not take any action if not running.
-	StopMonitoring: function () { if (Warehouser.DaemonTimer !== false) { clearTimeout(Warehouser.DaemonTimer); Warehouser.DaemonTimer = false; } },
-	MonitorDaemon: function () {
-		
-		// Do not run if already running or if nothing queued
-		if (Warehouser.Locked === true || Warehouser.Queue.length === 0 || Warehouser.Queue.length < Warehouser.Bundling.Limit)
-			setTimeout(Warehouser.MonitorDaemon, (Warehouser.MonitoringWindow * 1000));
-		else Warehouser.Send();
+	Daemon: {
+		_Timer: false,
 
+		// Warehouser.js/4.1 Do not take any action if already started.
+		Start: function () {
+
+			if (Warehouser.Daemon._Timer === false) Warehouser.Daemon._Timer = setTimeout(Warehouser.Daemon.Monitor, 1);
+
+		},
+		// Warehouser.js/5. Provide functionality to stop monitoring
+		// Warehouser.js/5.1 Do not take any action if not running.
+		Stop: function () {
+
+			if (Warehouser.Daemon._Timer !== false) { clearTimeout(Warehouser.Daemon._Timer); Warehouser.Daemon._Timer = false; }
+
+		},
+		Monitor: function () {
+console.log(Warehouser.Locked === true, Warehouser.Queue.length === 0, (Warehouser.Monitor.Deferrals >= 0 && Warehouser.Deferred.length === 0 ), ((new Date()).getTime()) % Warehouser.Bundling.Window !== 0 || Warehouser.Queue.length < Warehouser.Bundling.Limit);
+				setTimeout(Warehouser.Daemon.Monitor, (Warehouser.Monitor.Window * 1000))
+			if (Warehouser.Locked === true || // Do not run if already running
+				Warehouser.Queue.length === 0 || // or if nothing queued
+				(Warehouser.Monitor.Deferrals >= 0 && Warehouser.Deferred.length === 0 ) || // or nothing deferred/waiting
+				(new Date()).getTime() % Warehouser.Bundling.Window !== 0 || // or if we're not at bundling window
+				Warehouser.Queue.length < Warehouser.Bundling.Limit) // or if not at the bundle size limit
+				setTimeout(Warehouser.Daemon.Monitor, (Warehouser.Monitor.Window * 1000)); // Wait..
+			else Warehouser.Send(); // Otherwise process..
+
+		},
 	},
 
 	// Warehouser.js/6. Provide a common send structure for reads AND writes
@@ -81,6 +106,13 @@ var Warehouser = {
 			Count: Warehouser.Queue.length, // Warehouser.js/6.2.3 Add count of all requests contained
 			Requests: [] // Warehouser.js/6.2.4 Add storage for request objects
 		};
+
+		// Warehouser.js/<nospec> Add any deferred content to the queue up to deferral limit
+		if (Warehouser.Deferred.length > 0 && Warehouser.Bundling.Deferred > 0) {
+			var Deferred = 0;
+			while (Warehouser.Deferred.length > 0 && Deferred <= Warehouser.Bundling.Deferred)
+				Warehouser.Queue.push(Warehouser.Deferred.shift());
+		}
 
 		// Warehouser.js/6.3 Process all items from the queue into the new construct.
 		Warehouser.Queue.forEach(function (Request) {
@@ -166,12 +198,15 @@ var Warehouser = {
 
 		// Warehouser.js/6.6 Start the monitoring daemon to wait for completion
 		Warehouser.Current.Sent = (new Date()).getTime();
-		setTimeout(Warehouser.MonitorDaemon, (Warehouser.MonitoringWindow * 1000));
+		setTimeout(Warehouser.Daemon.Monitor, (Warehouser.MonitoringWindow * 1000));
 
 	},
 
 	// Warehouser.js/7. Define read logic of API
 	Read: function (Vector, Optional_Record, Optional_Revision) {
+
+		// Warehouser.js/<nospec> If locked, defer request until no longer locked.
+		if (Warehouser.Locked === true) return Warehouser.Deferred.push([Vector, Optional_Record, Optional_Revision]);
 
 		// Warehouser.js/7.1 Start formatting new request construct
 		var RequestObject = {
@@ -201,6 +236,9 @@ var Warehouser = {
 	// Warehouser.js/8. Define write logic for API
 	Write: function (RawData, Vector, Optional_Record) {
 
+		// Warehouser.js/<nospec> If locked, defer request until no longer locked.
+		if (Warehouser.Locked === true) return Warehouser.Deferred.push([Vector, Optional_Record, Optional_Revision]);
+
 		// Warehouser.js/8.1 Start formatting new request construct
 		var RequestObject = {
 			Type: 'Write', // Warehouser.js/8.1.1 Add request type to new construct.
@@ -226,6 +264,6 @@ var Warehouser = {
 }
 
 // Warehouser.js/9. Check if monitoring/runtime should start immediately
-if (Warehouser.Monitor.Immediate === true) Warehouser.StartMonitoring();
+if (Warehouser.Monitor.Immediate === true) Warehouser.Daemon.Start();
 
 // - YourMove Infrastructure

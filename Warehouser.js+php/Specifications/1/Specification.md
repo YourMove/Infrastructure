@@ -134,7 +134,6 @@ Note: An [*] on the end indicates not yet implemented.
 2.3.1.1 Configurable handling of max (defer to another server perhaps or ask client to wait, or to try much later) [*]
 
 2.3.2.1 Maximum requests per IP GLOBALLY [*]
-2.3.2.2 Maximum requests per "user profile" (hash of all identifying request vectors) GLOBALLY [*]
 
 2.3.2.3 Maximum requests per SUB-PATH / SUB-VECTOR [*]
 2.3.2.3.1 By "IP" [*]
@@ -229,11 +228,15 @@ Note: An [*] on the end indicates not yet implemented.
 11.AC.2 - Blank write request - read request without Vector, Record, but with Revision
 12.AC.3 - Blank write request - read request without Vector, but with Record and Revision
 13.AC.4 - Blank write request - read request with Vector, Record and Revision
-14.AC.5 - Write request without Vector, Record or Data - read request with Vector, Record and Revision
-15.AC.6 - Write request without Vector or Record but with Data - read request with Vector, Record and Revision
-16.AC.7 - Write request without Vector but with Record and Data - read request with Vector, Record and Revision
-17.AC.8 - Write request with Vector, Record and Data - read request with Vector, Record and Revision
-18.AC.9 - Perform all the above requests 1-8 in one single request with a randomized order.
+
+14.AC+BM.0 - 1 complete read and write, repeated twice. Both as manual batches rather than using monitoring
+15.AC+BA.1 - 1 complete read and write, repeated twice. Both batches sent automatically using configuration bundle size of 2
+16.AC+BA.2 - Queue's 1 request and waits for the batching window to elapse, where it should complete.
+17.AC+BA.3 - Submits empty requests every second for 3 seconds
+18.AC+BA.4 - Submits an empty request every second for 5 seconds, and submits one request inside of this.
+
+19.AC+BA+SEC.0 - Performs basic session based authentication
+20.AC+BA+SEC.1 - 
 
 * Version Milestone 0.5
 

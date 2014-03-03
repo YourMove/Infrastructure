@@ -41,7 +41,7 @@
 14.AC+BM.0 - 1 complete read and write, repeated twice. Both as manual batches rather than using monitoring
 15.AC+BA.1 - 1 complete read and write, repeated twice. Both batches sent automatically using configuration bundle size of 2
 
-16.AC+IS
+16.AC+BA.2 - only 1 read request is made with a bundling size of 2 set. Should process 1 within window timeframe
 
 * Version Milestone 0.5 - Ready for general consumption. [*]
 
@@ -281,5 +281,10 @@ With Vector, Record, and object-based Data. Success if JSON encodes object and w
 
 Read: [Revision 4 of record 2]
 Write: [../Specifications/1/Tests/_TestWarehouse//VectorPart/2/13925573533863748871.json]
+
+### 14.AC+BM.0
+
+1 complete read and write, repeated twice. Both as manual batches rather than using monitoring
+
 
 #### - YourMove Infrastructure

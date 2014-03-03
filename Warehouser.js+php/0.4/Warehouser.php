@@ -23,27 +23,13 @@ class Warehouser {
 	public static $OperationTimeout = 5; // Seconds
 	public static $MaxEndnodeScan = 5;  // 5 results will be checked to try and find an end node when scanning.
 
-	// Warehouser.php/2.3 Performance monitoring options [Not yet implemented]
-	public static $PerformanceMonitoring = array(
-		'Enabled' => FALSE,
+	// Warehouser.php/2.3 Request Limiting options
+	public static $RequestLimiting = array(
 
-		// Warehouser.php/2.3.1.1 Configurable handling of max
-		'Maximum' => array(
-
-			// Warehouser.php/2.3.2.1 Maximum requests per IP GLOBALLY
-			'ByIP' => array(
-				'Enabled' => FALSE,
-				'Count' => 1,
-				'Window' => 0 // Warehouser.php/2.3.2.3 Allow configurable window
-			),
-
-			// Warehouser.php/2.3.2.2 Maximum requests per "user profile" GLOBALLY
-			'ByProfile' => array(
-				'Enabled' => FALSE,
-				'Count' => 1000,
-				'Window' => 0 // Warehouser.php/2.3.2.3 Allow configurable window
-			)
-
+		// Warehouser.php/2.3.2.1 Maximum requests per IP GLOBALLY
+		'ByIP' => array(
+			'Count' => 1,
+			'Window' => 0 // Warehouser.php/2.3.2.3 Allow configurable window (in seconds)
 		),
 
 		// Warehouser.php/2.3.2.3 Maximum requests per SUB-PATH / SUB-VECTOR
@@ -51,7 +37,7 @@ class Warehouser {
 			'Enabled' => FALSE,
 			'Method' => 'Profile', // Warehouser.php/2.3.2.3.1 By "IP", 2.3.2.3.2 By "Profile"
 			'Count' => 100,
-			'Window' => 0 // Warehouser.php/2.3.2.3 Allow configurable window
+			'Window' => 0 // Warehouser.php/2.3.2.3 Allow configurable window (in seconds)
 		)
 
 	);
@@ -67,7 +53,6 @@ class Warehouser {
 	);
 
 	// End Warehouser.php Configuration - Only technical patches beyond this point!
-
 
 	// Warehouser.php/4. Define a path validity and consistency function that can also be used for finding the last record
 	// Warehouser.php/4(...) or revision in a path.
@@ -248,8 +233,11 @@ if (!empty($_POST) && !empty($_POST['Data'])) {
 
 		// Warehouser.php/13. Perform all queued reads second
 		if (!empty($Queue['Read'])) {
-			foreach ($Queue['Read'] as $Key=>$Request) 
+
+			foreach ($Queue['Read'] as $Key=>$Request) {
+				//if ()
 				$Results['Read'][$Key] = Warehouser::Read($Request['Vector'], $Request['Record'], $Request['Revision']);
+			}
 		}
 
 		// Warehouser.php/14. Encode return construct and write to browser atomically
