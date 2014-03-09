@@ -22,39 +22,13 @@
 
 				if (typeof Warehouser !== 'undefined') {
 				
-					console.log('YMI: Warehouser loaded, running test 14.AC+BM.0..');
+					console.log('YMI: Warehouser loaded, running test 14.AC+BM.0 - Part 1..');
 
+					Warehouser.Bundling.Window = 1;
 					Warehouser.Bundling.Limit = 2;
-					Warehouser.Bundling.Window = 5;
+					Warehouser.Bundling.AllowEmpty = true;
+					console.log(Warehouser.Daemon.Start());
 
-					Warehouser.Daemon.Start();
-
-					console.log('YMI: Part 1, Should wait until next 5 second window. Return 1-2 seconds after.. Part 2 at next 15 sec window');
-
-					console.log('Queueing request..');
-					Warehouser.Read('VectorPart', 2, 4);
-					
-					// Should wait until batch timeout then send
-
-					setTimeout(function () {
-
-						console.log('YMI: Part 2, Should wait until next 5 second window. Return 1-2 seconds after.. Part 3 at next 15 sec window');
-
-						console.log('Queueing request..');
-						Warehouser.Write({ Var1: 'Test Test' }, 'VectorPart', 2);
-
-					}, 15000);
-
-					setTimeout(function () {
-
-						console.log('YMI: Part 3, Should run as soon as 2 jobs');
-
-						console.log('Queueing 2 requests..');
-						Warehouser.Read('VectorPart', 2, 4);
-						Warehouser.Write({ Var1: 'Test Test' }, 'VectorPart', 2);
-
-					}, 30000);
-					
 				}
 
 				else {
@@ -76,7 +50,7 @@
 
 		<script type="text/javascript">
 
-			setTimeout("console.log('YMI: Test complete');", 50000);
+			setTimeout("console.log('YMI: Test complete');", 5000);
 
 		</script>
 

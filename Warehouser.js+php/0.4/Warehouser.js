@@ -20,9 +20,11 @@ var Warehouser = {
 
 		Type: 'AJAX', // Warehouser.js/2.3.1 AJAX (default), 2.3.2 COMET/longpoll
 
-		// Warehouser.js/2.4 Configurable connectio  tolerance
+		// Warehouser.js/2.4 Configurable connection  tolerance
 		Timeout: 2, // Warehouser.js/2.4.1 Connection timeout in seconds.
 		Retry: 0, // Warehouser.js/2.4.2 Retry failed requests X times.
+
+		// Warehouser.js/<nospec> Configurable connection limiting
 		Limit: 10, // Warehouser.js/2.4.3 Limit to this many requests (...)
 		Window: 10 // Warehouser.js/2.4.4(...) window period in seconds.
 
@@ -52,15 +54,18 @@ var Warehouser = {
 
 	// End Configuration - Only technical patches beyond this point!
 
+	// Warehouser.js/<nospec> Provide functionality to get even seconds
+	_GetSecs: function () { return Math.floor((new Date()).getTime() / 1000); },
+
 	// Warehouser.php/3. Preconfigure runtime storage
 
-	Current: {},
-	Queue: [],
-	Deferred: [],
+	_Current: {},
+	_Queue: [],
+	_Deferred: [],
 
-	LastRun: false,
-	Locked: false,
-	RequestObject: false,
+	_LastRun: false,
+	_Locked: false,
+	_RequestObject: false,
 
 	// Warehouser.js/4. Provide functionality to start the monitoring function
 	Daemon: {
@@ -69,7 +74,7 @@ var Warehouser = {
 		// Warehouser.js/4.1 Do not take any action if already started.
 		Start: function () {
 
-			if (Warehouser.Daemon._Timer === false) Warehouser.Daemon._Timer = setTimeout(Warehouser.Daemon.Monitor, 1);
+			if (Warehouser.Daemon._Timer === false) Warehouser.Daemon._Timer = setTimeout(Warehouser.Daemon.Monitor, 0);
 
 		},
 		// Warehouser.js/5. Provide functionality to stop monitoring
@@ -80,15 +85,34 @@ var Warehouser = {
 
 		},
 		Monitor: function () {
-console.log(Warehouser.Locked === true, Warehouser.Queue.length === 0, (Warehouser.Monitor.Deferrals >= 0 && Warehouser.Deferred.length === 0 ), ((new Date()).getTime()) % Warehouser.Bundling.Window !== 0 || Warehouser.Queue.length < Warehouser.Bundling.Limit);
-				setTimeout(Warehouser.Daemon.Monitor, (Warehouser.Monitor.Window * 1000))
-			if (Warehouser.Locked === true || // Do not run if already running
-				Warehouser.Queue.length === 0 || // or if nothing queued
-				(Warehouser.Monitor.Deferrals >= 0 && Warehouser.Deferred.length === 0 ) || // or nothing deferred/waiting
-				(new Date()).getTime() % Warehouser.Bundling.Window !== 0 || // or if we're not at bundling window
-				Warehouser.Queue.length < Warehouser.Bundling.Limit) // or if not at the bundle size limit
-				setTimeout(Warehouser.Daemon.Monitor, (Warehouser.Monitor.Window * 1000)); // Wait..
-			else Warehouser.Send(); // Otherwise process..
+
+			var Now = Warehouser._GetSecs(), Waiting = Warehouser._Queue.length + Warehouser._Deferred.length;	
+
+			if (
+
+				// Locked..
+				(Warehouser._Locked === true) || // Do not run if already running
+
+				( // Queuing..
+					(
+						(Waiting === 0) && // if nothing queued AND..
+						(Warehouser.Bundling.AllowEmpty != true) // empty bundles not allowed
+					)
+				) || // OR..
+
+				( // Bundling..
+					(
+						((Now % Warehouser.Bundling.Window) !== 0) && // if we're not at bundling window AND..
+						(Waiting != Warehouser.Bundling.Limit) // if we are not at bundling limit
+					) || // OR..
+					(
+						(Waiting <= Warehouser.Bundling.Limit) && // if not at the bundle size limit AND...
+						((Now - Warehouser._LastRun) < Warehouser.Bundling.Window) // if the window has not elapsed since last run
+					)
+				)
+
+			) { console.log('Waiting.. ', Now); setTimeout(Warehouser.Daemon.Monitor, (Warehouser.Monitor.Window * 1000)); }
+			else { console.log('Warehouser.js/<nospec> Performing send..', Now); Warehouser.Send(); }
 
 		},
 	},
@@ -97,25 +121,28 @@ console.log(Warehouser.Locked === true, Warehouser.Queue.length === 0, (Warehous
 	Send: function () {
 
 		// Warehouser.js/6.1 Send should lock Warehouser - but does not need to check if locked as this is daemon's job to trigger this
-		Warehouser.Locked = true;
+		Warehouser._Locked = true;
+		Warehouser._LastRun = Warehouser._GetSecs();
 
 		// Warehouser.js/6.2 Start building request object ready for adding other data into
-		Warehouser.Current = {
-			Started: (new Date()).getTime(), // Warehouser.js/6.2.1 Add request start time
+		Warehouser._Current = {
+			Started: Warehouser._LastRun, // Warehouser.js/6.2.1 Add request start time
 			Sent: false, // Warehouser.js/6.2.2 Add sent status and sent time
-			Count: Warehouser.Queue.length, // Warehouser.js/6.2.3 Add count of all requests contained
+			Count: Warehouser._Queue.length, // Warehouser.js/6.2.3 Add count of all requests contained
 			Requests: [] // Warehouser.js/6.2.4 Add storage for request objects
 		};
 
 		// Warehouser.js/<nospec> Add any deferred content to the queue up to deferral limit
-		if (Warehouser.Deferred.length > 0 && Warehouser.Bundling.Deferred > 0) {
+		if (Warehouser._Deferred.length > 0 && Warehouser.Bundling.Deferred > 0) {
 			var Deferred = 0;
-			while (Warehouser.Deferred.length > 0 && Deferred <= Warehouser.Bundling.Deferred)
-				Warehouser.Queue.push(Warehouser.Deferred.shift());
+			while (Warehouser.Deferred.length > 0 && Deferred <= Warehouser.Bundling.Deferred) {
+				Warehouser._Queue.push(Warehouser.Deferred.shift());
+				Deferred += 1;
+			}
 		}
 
 		// Warehouser.js/6.3 Process all items from the queue into the new construct.
-		Warehouser.Queue.forEach(function (Request) {
+		Warehouser._Queue.forEach(function (Request) {
 
 			// Warehouser.js/6.3.1 Fill in any missing data
 
@@ -125,16 +152,16 @@ console.log(Warehouser.Locked === true, Warehouser.Queue.length === 0, (Warehous
 			Request.Data = Request.Data || {};
 
 			// Warehouser.js/6.3.2 Push into storage
-			Warehouser.Current.Requests.push(Request);
+			Warehouser._Current.Requests.push(Request);
 
 		});
 
 		// Warehouser.js/6.3.3 Clear the queue once processed
-		Warehouser.Queue = [];
+		Warehouser._Queue = [];
 
 		// Warehouser.js/6.4 JSON encode the entire construct ready for transmission
-		Warehouser.Current.JSON = JSON.stringify(Warehouser.Current);
-		Warehouser.Current.Response = false;
+		Warehouser._Current.JSON = JSON.stringify(Warehouser._Current);
+		Warehouser._Current.Response = false;
 
 		// Warehouser.js/6.5 Fork for connection type (case insensitive)
 		if (Warehouser.Connection.Type.toLowerCase() === 'ajax') {
@@ -142,49 +169,49 @@ console.log(Warehouser.Locked === true, Warehouser.Queue.length === 0, (Warehous
 			// Warehouser.js/6.5.1 AJAX
 
 			// Warehouser.js/6.5.1.1 Construct object (cross-browser)
-			Warehouser.RequestObject = false;
-			try { Warehouser.RequestObject = new XMLHttpRequest(); }
+			Warehouser._RequestObject = false;
+			try { Warehouser._RequestObject = new XMLHttpRequest(); }
 			catch (Exception) {
-				try { Warehouser.RequestObject = new ActiveXObject('Msxml2.XMLHTTP'); }
-				catch (Exception2) { Warehouser.RequestObject = new ActiveXObject('Microsoft.XMLHTTP'); }
+				try { Warehouser._RequestObject = new ActiveXObject('Msxml2.XMLHTTP'); }
+				catch (Exception2) { Warehouser._RequestObject = new ActiveXObject('Microsoft.XMLHTTP'); }
 			}
 			// Warehouser.js/6.5.1.1.1 Will not continue if this fails
-			if(Warehouser.RequestObject === false)
+			if(Warehouser._RequestObject === false)
 				return console.log('Warehouser.js/6.5.1.2: AJAX: Fatal Error: Could not create ANY XHR object');
 
 			// Warehouser.js/6.5.1.2 Add callback
-			Warehouser.RequestObject.onreadystatechange = function() {
+			Warehouser._RequestObject.onreadystatechange = function() {
 				// Warehouser.js/6.5.1.2.1 Check request is complete or not.
-				if (Warehouser.RequestObject.readyState === 4) {
+				if (Warehouser._RequestObject.readyState === 4) {
 					// Warehouser.js/6.5.1.2.2 Check request success or not.
-					if (Warehouser.RequestObject.status !== 200)
+					if (Warehouser._RequestObject.status !== 200)
 						return console.log('Warehouser.js/<nospec>: AJAX: Fatal Error: Non-success return from API');
 					
 					// Warehouser.js/6.5.1.2.3 JSON decode return construct.
-					console.log('Response..', JSON.parse(Warehouser.RequestObject.responseText));
-					Warehouser.Current.Response = JSON.parse(Warehouser.RequestObject.responseText);
+					console.log('Response..', JSON.parse(Warehouser._RequestObject.responseText));
+					Warehouser._Current.Response = JSON.parse(Warehouser._RequestObject.responseText);
 
 					// Warehouser.js/6.5.1.2.4 Run "Callback" from each request construct (if any).
 					// Warehouser.js/6.5.1.2.4.1 Note: Return data specific to this request will be available as first/only argument to Callback.
-					Warehouser.Current.Requests.forEach(function (Request, Index) {
+					Warehouser._Current.Requests.forEach(function (Request, Index) {
 						// If the request has a callback, and there is data for this request - run the callback.
 						if (typeof Request.Callback !== 'undefined' &&
-							typeof Warehouser.Current.Response[Index] !== 'undefined' && Warehouser.Current.Response[Index].length > 0) {
-							Request.Callback(Warehouser.Current.Response[Index]);
+							typeof Warehouser._Current.Response[Index] !== 'undefined' && Warehouser._Current.Response[Index].length > 0) {
+							Request.Callback(Warehouser._Current.Response[Index]);
 						}
 						// Else, no action required.
 					});
 
 					// Unlock ready for new requests
-					Warehouser.Locked = false;
+					Warehouser._Locked = false;
 					console.log('Warehouser.js/<nospec>: AJAX: Request complete');
 				}
 			};
 
 			// Warehouser.js/6.5.1.3 Finalise and send (transmit) request through newly created object
-			Warehouser.RequestObject.open('POST', Warehouser.API.URL, true);
-			Warehouser.RequestObject.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-			Warehouser.RequestObject.send('Data='+encodeURIComponent(Warehouser.Current.JSON));
+			Warehouser._RequestObject.open('POST', Warehouser.API.URL, true);
+			Warehouser._RequestObject.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+			Warehouser._RequestObject.send('Data='+encodeURIComponent(Warehouser._Current.JSON));
 
 		}
 
@@ -197,7 +224,7 @@ console.log(Warehouser.Locked === true, Warehouser.Queue.length === 0, (Warehous
 		}
 
 		// Warehouser.js/6.6 Start the monitoring daemon to wait for completion
-		Warehouser.Current.Sent = (new Date()).getTime();
+		Warehouser._Current.Sent = Warehouser._GetSecs();
 		setTimeout(Warehouser.Daemon.Monitor, (Warehouser.MonitoringWindow * 1000));
 
 	},
@@ -206,7 +233,7 @@ console.log(Warehouser.Locked === true, Warehouser.Queue.length === 0, (Warehous
 	Read: function (Vector, Optional_Record, Optional_Revision) {
 
 		// Warehouser.js/<nospec> If locked, defer request until no longer locked.
-		if (Warehouser.Locked === true) return Warehouser.Deferred.push([Vector, Optional_Record, Optional_Revision]);
+		if (Warehouser._Locked === true) return Warehouser.Deferred.push([Vector, Optional_Record, Optional_Revision]);
 
 		// Warehouser.js/7.1 Start formatting new request construct
 		var RequestObject = {
@@ -229,7 +256,7 @@ console.log(Warehouser.Locked === true, Warehouser.Queue.length === 0, (Warehous
 		else { RequestObject.Record = ''; RequestObject.Revision = ''; }
 
 		// Warehouser.js/7.3 Push request construct to processing queue
-		Warehouser.Queue.push(RequestObject);
+		Warehouser._Queue.push(RequestObject);
 
 	},
 
@@ -237,7 +264,7 @@ console.log(Warehouser.Locked === true, Warehouser.Queue.length === 0, (Warehous
 	Write: function (RawData, Vector, Optional_Record) {
 
 		// Warehouser.js/<nospec> If locked, defer request until no longer locked.
-		if (Warehouser.Locked === true) return Warehouser.Deferred.push([Vector, Optional_Record, Optional_Revision]);
+		if (Warehouser._Locked === true) return Warehouser.Deferred.push([Vector, Optional_Record, Optional_Revision]);
 
 		// Warehouser.js/8.1 Start formatting new request construct
 		var RequestObject = {
@@ -257,11 +284,13 @@ console.log(Warehouser.Locked === true, Warehouser.Queue.length === 0, (Warehous
 		else RequestObject.Record = '';
 
 		// Warehouser.js/8.4 Push request construct to processing queue
-		Warehouser.Queue.push(RequestObject);
+		Warehouser._Queue.push(RequestObject);
 
 	}
-
 }
+
+// Warehouser.js/<nospec> Init the last run time
+Warehouser.LastRun = Warehouser._GetSecs();
 
 // Warehouser.js/9. Check if monitoring/runtime should start immediately
 if (Warehouser.Monitor.Immediate === true) Warehouser.Daemon.Start();

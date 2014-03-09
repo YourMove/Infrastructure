@@ -40,11 +40,24 @@
 
 14.AC+BM.0 - 1 complete read and write, repeated twice. Both as manual batches rather than using monitoring
 15.AC+BA.1 - 1 complete read and write, repeated twice. Both batches sent automatically using configuration bundle size of 2
+16.AC+BA.2 - 1 read request is made with a bundling size of 2 set. Then, performs same test again for reusability. Then does 2 requests instantly submitting.
+17.AC+BA.3 - a 1 second window with no reads and no writes. Should read default record every second.
 
-16.AC+BA.2 - only 1 read request is made with a bundling size of 2 set. Should process 1 within window timeframe
+18.AC+RL.0 - Attempts to make 10 requests in one go with limit set to 5. Library should lock and requests deferred until a given time window.
+19.AC+DL.0 - With deferrals disabled and the server artificially (sleep(10)) delayed returning, another request will be made which should hard fail.
+20.AC+RL+DL.0 - 1 deferral limit and request limiting set to 1 with artificial delay - third request should hard fail.
+
+21.AC+RL+DL+CIS.0 - This method keeps track of clients deployed by the server after issuing them an ID up front. These ID's are not transferrable between IP addresses unlike cookies and sessions, however the server may or may not allow reissuing new ID's upon request if the old ID is given and still valid (within a timeframe).
+
+22.AC+RL+DL+CIS.1 - Uses an existing session variable for security on the server. It performs 2 tests - 1 will fail, a session variable will be set, and then another test made which will succeed.
+
+It can either be a variable like 'isAuthd'=>1 or =>TRUE, or like 'Username'=>'MJCD' with the latter being far more secure. It can also be a timestamp that the user logged in. If not a string, a random number will be postfixed to make sure its unique.
+
+23.AC+RL+DL+CIS.2 - Uses an existing session variable, as well as triggering IP security through hard request count limiting on the server.
+
+24.AC+BM+BA+DL+CIS.0 - Makes 3 pass read write combo's with automatic and manual batching, request limiting, deferral limiting and client id security.
 
 * Version Milestone 0.5 - Ready for general consumption. [*]
-
 
 * Version Milestone 0.6 - 0.9 [*]
 

@@ -1,0 +1,17 @@
+Spec 2.0 notes
+
+1. Transparent request batching on both server and client -
+client should not make unneccesary requests,
+non-complient clients should still only perform 1 request per record still and duplicate results to save disk io
+
+2. SSL support
+
+3. Possibly a proprietary encoding - not for security but to try to encourage the use of official clients and tools, or at least well developed ones.
+
+4. Self contained JavaScript file that is customized on deployment to match the servers configuration.
+
+5. Implement the core schema support and schema extensions such as iterative schema's and central schema db's
+
+6. Indexing support
+
+7. Key and possibly cert based security

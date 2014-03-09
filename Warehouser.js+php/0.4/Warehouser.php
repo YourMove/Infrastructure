@@ -168,6 +168,9 @@ class Warehouser {
 
 } // End Warehouser;
 
+// Warehouser.php/11. <out of order> Prepare results storage
+$Results = array('Read'=>array(), 'Write'=>array());
+
 // Warehouser.php/7. Check for any HTTP requests
 if (!empty($_POST) && !empty($_POST['Data'])) {
 
@@ -222,9 +225,6 @@ if (!empty($_POST) && !empty($_POST['Data'])) {
 
 		}
 
-		// Warehouser.php/11. Prepare results storage
-		$Results = array('Read'=>array(), 'Write'=>array());
-
 		// Warehouser.php/12. Perform all queued writes first (if any)
 		if (!empty($Queue['Write'])) {
 			foreach ($Queue['Write'] as $Key=>$Request)
@@ -240,10 +240,10 @@ if (!empty($_POST) && !empty($_POST['Data'])) {
 			}
 		}
 
-		// Warehouser.php/14. Encode return construct and write to browser atomically
-		exit(json_encode($Results));
-
 	}
+
+	// Warehouser.php/14. Encode return construct and write to browser atomically
+	exit(json_encode($Results));
 
 } // End HTTP Request Processing
 
